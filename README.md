@@ -1,3 +1,5 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 # ZenWall
 
 ZenWall is a lightweight, privacy-first Android firewall app.  
