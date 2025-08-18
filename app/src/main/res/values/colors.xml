@@ -7,4 +7,6 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF0F0E0E</color>
     <color name="white">#FFFBF7F5</color>
+    <!-- Splash background (muted black) -->
+    <color name="splash_background">#0F0E0E</color>
 </resources>

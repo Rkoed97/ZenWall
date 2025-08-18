@@ -2,4 +2,12 @@
 <resources>
 
     <style name="Theme.ZenWall" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Splash Theme per SPLASHSCREEN.md -->
+    <style name="Theme.ZenWall.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/zenwall_splash_text</item>
+        <item name="windowSplashScreenAnimationDuration">750</item>
+        <item name="postSplashScreenTheme">@style/Theme.ZenWall</item>
+    </style>
 </resources>
