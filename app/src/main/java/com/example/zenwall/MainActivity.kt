@@ -2,6 +2,7 @@ package com.example.zenwall
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import android.content.Intent
@@ -25,9 +26,55 @@ import com.example.zenwall.ui.AppsActivity
 import com.example.zenwall.ui.HistoryActivity
 import com.example.zenwall.vpn.ZenWallVpnService
 import kotlinx.coroutines.launch
+import android.widget.Toast
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 
 @OptIn(ExperimentalMaterial3Api::class)
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
+    private val allowedAuthenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+
+    private fun authenticateThen(onSuccess: () -> Unit) {
+        val biometricManager = BiometricManager.from(this)
+        val canAuth = biometricManager.canAuthenticate(allowedAuthenticators)
+        if (canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
+            val reason = when (canAuth) {
+                BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> "No biometric hardware available"
+                BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> "Biometric hardware unavailable"
+                BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> "No biometrics/PIN enrolled. Please set up a screen lock or biometrics."
+                else -> "Authentication not available"
+            }
+            Toast.makeText(this, reason, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val executor = ContextCompat.getMainExecutor(this)
+        val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                onSuccess()
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                super.onAuthenticationError(errorCode, errString)
+                Toast.makeText(this@MainActivity, errString, Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onAuthenticationFailed() {
+                super.onAuthenticationFailed()
+                // Optional feedback
+            }
+        })
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Authenticate to control ZenWall")
+            .setSubtitle("Use biometrics or device PIN/Pattern/Password")
+            .setAllowedAuthenticators(allowedAuthenticators)
+            .build()
+
+        prompt.authenticate(promptInfo)
+    }
     private lateinit var vm: com.example.zenwall.ui.MainViewModel
 
     private val vpnPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { _ ->
@@ -110,11 +157,13 @@ class MainActivity : ComponentActivity() {
                             Spacer(Modifier.height(16.dp))
                             Button(
                                 onClick = {
-                                    val prep = android.net.VpnService.prepare(this@MainActivity)
-                                    if (prep != null) {
-                                        vpnPermissionLauncher.launch(prep)
-                                    } else {
-                                        startVpnService()
+                                    authenticateThen {
+                                        val prep = android.net.VpnService.prepare(this@MainActivity)
+                                        if (prep != null) {
+                                            vpnPermissionLauncher.launch(prep)
+                                        } else {
+                                            startVpnService()
+                                        }
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(0.85f).height(56.dp)
@@ -122,11 +171,13 @@ class MainActivity : ComponentActivity() {
                             Spacer(Modifier.height(12.dp))
                             OutlinedButton(
                                 onClick = {
-                                    val intent = Intent(this@MainActivity, ZenWallVpnService::class.java).setAction(ZenWallVpnService.ACTION_STOP)
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                        startForegroundService(intent)
-                                    } else {
-                                        startService(intent)
+                                    authenticateThen {
+                                        val intent = Intent(this@MainActivity, ZenWallVpnService::class.java).setAction(ZenWallVpnService.ACTION_STOP)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                            startForegroundService(intent)
+                                        } else {
+                                            startService(intent)
+                                        }
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(0.85f).height(56.dp)
@@ -167,13 +218,7 @@ private fun DrawerModeContent(vm: com.example.zenwall.ui.MainViewModel, onClose:
             checked = mode,
             onCheckedChange = { enabled ->
                 vm.setWhitelistMode(enabled)
-                // Ask service to rebuild right away
-                val intent = Intent(context, ZenWallVpnService::class.java).setAction(ZenWallVpnService.ACTION_REBUILD)
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent)
-                } else {
-                    context.startService(intent)
-                }
+                Toast.makeText(context, "Restart the VPN for changes to take effect", Toast.LENGTH_LONG).show()
             },
             modifier = Modifier.padding(top = 8.dp)
         )

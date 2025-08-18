@@ -26,7 +26,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.example.zenwall.data.AppRulesRepo
 import com.example.zenwall.ui.theme.ZenWallTheme
-import com.example.zenwall.vpn.ZenWallVpnService
+import android.widget.Toast
 import kotlinx.coroutines.launch
 
 class AppsActivity : ComponentActivity() {
@@ -149,29 +149,20 @@ private fun AppsScreen(
                     Switch(checked = showSystem, onCheckedChange = { showSystem = it })
                 }
                 Button(onClick = {
-                    // Persist and rebuild
+                    // Persist selection, notify user, and return to Home
                     scope.launch { repo.setBlockedPackages(selected) }
-                    val intent = Intent(context, ZenWallVpnService::class.java).setAction(ZenWallVpnService.ACTION_REBUILD)
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                        context.startForegroundService(intent)
-                    } else {
-                        context.startService(intent)
-                    }
-                }) { Text("Apply & Rebuild") }
+                    Toast.makeText(context, "Restart the VPN for changes to take effect", Toast.LENGTH_LONG).show()
+                    context.startActivity(Intent(context, com.example.zenwall.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                    (context as? android.app.Activity)?.finish()
+                }) { Text("Save") }
             }
             LazyColumn(Modifier.fillMaxSize()) {
                 items(filtered, key = { it.pkg }) { app ->
                     AppRow(app = app, checked = selected.contains(app.pkg)) { newChecked ->
                         val newSelected = if (newChecked) selected + app.pkg else selected - app.pkg
                         selected = newSelected
-                        // Persist immediately and trigger VPN rebuild automatically
+                        // Persist immediately; user must restart VPN to apply changes
                         scope.launch { repo.setBlockedPackages(newSelected) }
-                        val intent = Intent(context, ZenWallVpnService::class.java).setAction(ZenWallVpnService.ACTION_REBUILD)
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                            context.startForegroundService(intent)
-                        } else {
-                            context.startService(intent)
-                        }
                     }
                 }
             }
