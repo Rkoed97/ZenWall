@@ -28,6 +28,38 @@
             </intent-filter>
         </service>
 
+        <!-- Quick Settings tile service -->
+        <service
+            android:name=".qs.VpnTileService"
+            android:icon="@mipmap/app_icon"
+            android:label="@string/qs_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Home screen widget provider -->
+        <receiver
+            android:name=".widget.VpnWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_vpn_info" />
+        </receiver>
+
+        <!-- Authentication gate -->
+        <activity
+            android:name=".auth.AuthenticationActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.ZenWall.Transparent" />
+
         <activity android:name=".ui.HistoryActivity" />
         <activity android:name=".ui.AppsActivity" />
 
