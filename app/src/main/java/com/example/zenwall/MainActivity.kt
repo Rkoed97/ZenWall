@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import android.content.Intent
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
@@ -39,10 +40,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : FragmentActivity() {
     private val allowedAuthenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    private var keepOnSplash: Boolean = true
+    private var splashDelay: Long = 750;
 
     private fun authenticateThen(onSuccess: () -> Unit) {
         val biometricManager = BiometricManager.from(this)
@@ -95,7 +100,16 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Install AndroidX SplashScreen per SPLASHSCREEN.md
+        val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        // Keep splash visible for a short time to enhance brand visibility
+        splash.setKeepOnScreenCondition { keepOnSplash }
+        lifecycleScope.launch {
+            // Delay just under a second for a smoother transition without feeling slow
+            delay(splashDelay);
+            keepOnSplash = false
+        }
         vm = androidx.lifecycle.ViewModelProvider(this)[com.example.zenwall.ui.MainViewModel::class.java]
         enableEdgeToEdge()
         setContent {
