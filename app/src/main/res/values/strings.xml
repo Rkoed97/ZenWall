@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">ZenWall</string>
+    <string name="splash_title">ZenWall</string>
+    <string name="splash_subtitle">Focus. Secure. Control your network with ease.</string>
 </resources>
