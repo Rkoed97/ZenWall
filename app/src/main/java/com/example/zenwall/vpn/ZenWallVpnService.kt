@@ -18,6 +18,8 @@ class ZenWallVpnService : VpnService() {
         const val ACTION_STOP = "com.example.zenwall.ACTION_STOP"
         private const val NOTIF_ID = 42
         private const val CHANNEL_ID = "zenwall_vpn"
+        // Exposed running state for UI to observe
+        val isRunning: kotlinx.coroutines.flow.MutableStateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(false)
     }
 
     private var tun: ParcelFileDescriptor? = null
@@ -49,6 +51,8 @@ class ZenWallVpnService : VpnService() {
     override fun onDestroy() {
         try { tun?.close() } catch (_: Exception) {}
         tun = null
+        // Update running state
+        try { isRunning.value = false } catch (_: Exception) {}
         // Ensure foreground is stopped when service is destroyed
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) stopForeground(STOP_FOREGROUND_REMOVE) else stopForeground(true)
@@ -65,6 +69,8 @@ class ZenWallVpnService : VpnService() {
     private fun stopVpn() {
         try { tun?.close() } catch (_: Exception) {}
         tun = null
+        // Update running state
+        try { isRunning.value = false } catch (_: Exception) {}
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) stopForeground(STOP_FOREGROUND_REMOVE) else stopForeground(true)
         } catch (_: Exception) {}
@@ -130,5 +136,6 @@ class ZenWallVpnService : VpnService() {
         } catch (_: Exception) {}
 
         tun = builder.establish()
+                try { isRunning.value = tun != null } catch (_: Exception) {}
     }
 }

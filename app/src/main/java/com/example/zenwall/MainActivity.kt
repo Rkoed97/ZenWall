@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
@@ -30,6 +31,14 @@ import android.widget.Toast
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : FragmentActivity() {
@@ -153,35 +162,62 @@ class MainActivity : FragmentActivity() {
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("Controls", style = MaterialTheme.typography.titleLarge)
-                            Spacer(Modifier.height(16.dp))
-                            Button(
+                            val running by com.example.zenwall.vpn.ZenWallVpnService.isRunning.collectAsState(initial = false)
+
+                            // Big round toggle button with heartbeat when ON
+                            val targetScale = if (running) 1.08f else 1f
+                            val infinite = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse")
+                            val pulse by infinite.animateFloat(
+                                initialValue = 1f,
+                                targetValue = targetScale,
+                                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                                    animation = androidx.compose.animation.core.tween(durationMillis = 900),
+                                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                                ),
+                                label = "pulseAnim"
+                            )
+                            val scale = if (running) pulse else 1f
+
+                            val bgColor = if (running) androidx.compose.ui.graphics.Color(0xFF81C784) else androidx.compose.ui.graphics.Color(0xFF424242)
+                            val text = if (running) "Turn Off" else "Turn On"
+
+                            androidx.compose.material3.Surface(
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .graphicsLayer(scaleX = scale, scaleY = scale),
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                color = bgColor,
+                                tonalElevation = if (running) 6.dp else 2.dp,
+                                shadowElevation = if (running) 12.dp else 4.dp,
                                 onClick = {
                                     authenticateThen {
-                                        val prep = android.net.VpnService.prepare(this@MainActivity)
-                                        if (prep != null) {
-                                            vpnPermissionLauncher.launch(prep)
+                                        if (running) {
+                                            val intent = Intent(this@MainActivity, ZenWallVpnService::class.java).setAction(ZenWallVpnService.ACTION_STOP)
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                                startForegroundService(intent)
+                                            } else {
+                                                startService(intent)
+                                            }
                                         } else {
-                                            startVpnService()
+                                            val prep = android.net.VpnService.prepare(this@MainActivity)
+                                            if (prep != null) {
+                                                vpnPermissionLauncher.launch(prep)
+                                            } else {
+                                                startVpnService()
+                                            }
                                         }
                                     }
-                                },
-                                modifier = Modifier.fillMaxWidth(0.85f).height(56.dp)
-                            ) { Text("Start VPN") }
-                            Spacer(Modifier.height(12.dp))
-                            OutlinedButton(
-                                onClick = {
-                                    authenticateThen {
-                                        val intent = Intent(this@MainActivity, ZenWallVpnService::class.java).setAction(ZenWallVpnService.ACTION_STOP)
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                            startForegroundService(intent)
-                                        } else {
-                                            startService(intent)
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(0.85f).height(56.dp)
-                            ) { Text("Stop VPN") }
+                                }
+                            ) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PowerSettingsNew,
+                                        contentDescription = text,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(120.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
