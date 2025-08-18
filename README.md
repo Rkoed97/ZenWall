@@ -1,4 +1,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Open Source](https://img.shields.io/badge/Open%20Source-Yes-blue)
+![Privacy Friendly](https://img.shields.io/badge/Privacy-Friendly-green)
+![Android](https://img.shields.io/badge/Platform-Android-brightgreen)
+![Kotlin](https://img.shields.io/badge/Language-Kotlin-7f52ff)
+
 
 # ZenWall
 
@@ -69,3 +74,9 @@ This makes ZenWall one of the most privacy-respecting, lightweight, and effectiv
 
 ZenWall is open source, released under the **MIT License**.  
 You are free to use, modify, and share it under the terms of the license.
+
+---
+
+## Keywords
+
+android, firewall, vpnservice, privacy, open-source, productivity, whitelist, blacklist, lightweight, data-saver
