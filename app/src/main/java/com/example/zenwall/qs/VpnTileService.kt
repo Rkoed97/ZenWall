@@ -15,8 +15,12 @@ class VpnTileService : TileService() {
         super.onStartListening()
         val running = try { ZenWallVpnService.isRunning.value } catch (_: Exception) { false }
         qsTile?.apply {
-            label = getString(R.string.qs_tile_label)
-            icon = android.graphics.drawable.Icon.createWithResource(this@VpnTileService, R.drawable.ic_power)
+            val labelText = if (running) getString(R.string.widget_status_on) else getString(R.string.widget_status_off)
+            label = labelText
+            icon = android.graphics.drawable.Icon.createWithResource(
+                this@VpnTileService,
+                if (running) R.drawable.ic_qs_zenwall_on else R.drawable.ic_qs_zenwall_off
+            )
             state = if (running) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             contentDescription = if (running) getString(R.string.qs_tile_cd_on) else getString(R.string.qs_tile_cd_off)
             updateTile()
