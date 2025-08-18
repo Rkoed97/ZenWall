@@ -71,6 +71,9 @@ class ZenWallVpnService : VpnService() {
         tun = null
         // Update running state
         try { isRunning.value = false } catch (_: Exception) {}
+        // Notify widgets and QS tile
+        try { com.example.zenwall.widget.VpnWidgetProvider.updateAll(this) } catch (_: Exception) {}
+        try { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) com.example.zenwall.qs.VpnTileService.requestListeningState(this) } catch (_: Exception) {}
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) stopForeground(STOP_FOREGROUND_REMOVE) else stopForeground(true)
         } catch (_: Exception) {}
@@ -137,5 +140,8 @@ class ZenWallVpnService : VpnService() {
 
         tun = builder.establish()
                 try { isRunning.value = tun != null } catch (_: Exception) {}
+        // Notify widgets and QS tile
+        try { com.example.zenwall.widget.VpnWidgetProvider.updateAll(this) } catch (_: Exception) {}
+        try { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) com.example.zenwall.qs.VpnTileService.requestListeningState(this) } catch (_: Exception) {}
     }
 }

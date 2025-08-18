@@ -10,4 +10,13 @@
         <item name="windowSplashScreenAnimationDuration">750</item>
         <item name="postSplashScreenTheme">@style/Theme.ZenWall</item>
     </style>
+
+    <!-- Transparent theme for AuthenticationActivity -->
+    <style name="Theme.ZenWall.Transparent" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation</item>
+    </style>
 </resources>
