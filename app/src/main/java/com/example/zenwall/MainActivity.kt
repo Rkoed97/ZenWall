@@ -104,11 +104,17 @@ class MainActivity : FragmentActivity() {
         // Install AndroidX SplashScreen per SPLASHSCREEN.md
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
-        // Keep splash visible for a short time to enhance brand visibility
+        // Keep splash visible while preloading installed apps, but cap the wait time
         splash.setKeepOnScreenCondition { keepOnSplash }
+        // Start preloading the list of installed apps
+        val appsRepo = com.example.zenwall.data.InstalledAppsRepository.get(this)
+        appsRepo.ensurePreloaded()
         lifecycleScope.launch {
-            // Delay just under a second for a smoother transition without feeling slow
-            delay(splashDelay);
+            // Wait until preload finishes or timeout to avoid long startup
+            val maxWaitMs = 1200L
+            kotlinx.coroutines.withTimeoutOrNull(maxWaitMs) {
+                appsRepo.isLoading.collect { if (!it) return@collect }
+            }
             keepOnSplash = false
         }
         vm = androidx.lifecycle.ViewModelProvider(this)[com.example.zenwall.ui.MainViewModel::class.java]

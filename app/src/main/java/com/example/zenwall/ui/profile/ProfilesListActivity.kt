@@ -18,7 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ElevatedCard
@@ -134,7 +134,11 @@ private fun ProfilesListScreen(onBack: () -> Unit) {
                                             .putExtra("fromSettings", true)
                                             .putExtra("profileId", p.id))
                                     }) { Icon(Icons.Filled.Visibility, contentDescription = "Preview") }
-                                    IconButton(onClick = { scope.launch { repo.duplicateProfile(p.id) } }) { Icon(Icons.Filled.ContentCopy, contentDescription = "Duplicate") }
+                                    IconButton(onClick = {
+                                        context.startActivity(Intent(context, ProfileEditorActivity::class.java)
+                                            .putExtra("fromSettings", true)
+                                            .putExtra("profileId", p.id))
+                                    }) { Icon(Icons.Filled.Edit, contentDescription = "Edit") }
                                     IconButton(onClick = { scope.launch { repo.deleteProfile(p.id) } }) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
                                 }
                             }

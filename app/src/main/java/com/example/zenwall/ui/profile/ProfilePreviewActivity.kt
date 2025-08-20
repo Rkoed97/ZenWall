@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -103,6 +104,20 @@ private fun ProfilePreviewScreen(profileId: Long, onBack: () -> Unit) {
                         .putExtra("fromSettings", true)
                         .putExtra("profileId", p.id))
                 }) { Icon(Icons.Filled.Edit, contentDescription = "Edit profile") }
+                // Duplicate
+                IconButton(onClick = {
+                    scope.launch {
+                        val newId = repo.duplicateProfile(p.id)
+                        if (newId > 0) {
+                            ctx.startActivity(android.content.Intent(ctx, ProfileEditorActivity::class.java)
+                                .putExtra("fromSettings", true)
+                                .putExtra("profileId", newId))
+                            (ctx as? android.app.Activity)?.finish()
+                        } else {
+                            android.widget.Toast.makeText(ctx, "Failed to duplicate", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }) { Icon(Icons.Filled.ContentCopy, contentDescription = "Duplicate profile") }
             }
         })
     }) { padding ->
