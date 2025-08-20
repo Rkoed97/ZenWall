@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -100,39 +101,18 @@ private fun AppsScreen(
             },
             actions = {
                 IconButton(onClick = onGoHistory) {
-                    Icon(Icons.Filled.History, contentDescription = "Overview")
+                    Icon(Icons.Filled.Dashboard, contentDescription = "Overview")
                 }
             }
         )
     }, bottomBar = {
-        BottomAppBar {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onGoHome) {
-                    Icon(Icons.Filled.Home, contentDescription = "Home")
-                    Spacer(Modifier.width(8.dp))
-                    Text("Home")
-                }
-                TextButton(onClick = onGoHistory) {
-                    Icon(Icons.Filled.History, contentDescription = "Overview")
-                    Spacer(Modifier.width(8.dp))
-                    Text("Overview")
-                }
-                TextButton(onClick = { /* already here */ }) {
-                    Icon(Icons.Filled.Apps, contentDescription = "Manage Apps")
-                    Spacer(Modifier.width(8.dp))
-                    Text("Manage Apps")
-                }
-                TextButton(onClick = { context.startActivity(Intent(context, SettingsActivity::class.java)) }) {
-                    Icon(Icons.Filled.Settings, contentDescription = "Settings")
-                    Spacer(Modifier.width(8.dp))
-                    Text("Settings")
-                }
-            }
-        }
+        com.example.zenwall.ui.common.ZenBottomBar(
+            selected = com.example.zenwall.ui.common.BottomTab.Apps,
+            onHome = onGoHome,
+            onOverview = onGoHistory,
+            onApps = { /* already here */ },
+            onSettings = { context.startActivity(Intent(context, SettingsActivity::class.java)) }
+        )
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
             OutlinedTextField(

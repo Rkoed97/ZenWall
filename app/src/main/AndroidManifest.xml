@@ -58,26 +58,30 @@
             android:name=".auth.AuthenticationActivity"
             android:exported="false"
             android:excludeFromRecents="true"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.ZenWall.Transparent" />
 
-        <activity android:name=".ui.HistoryActivity" />
-        <activity android:name=".ui.AppsActivity" />
-        <activity android:name=".ui.SettingsActivity" />
+        <activity android:name=".ui.HistoryActivity"
+            android:screenOrientation="portrait" />
+        <activity android:name=".ui.AppsActivity" android:screenOrientation="portrait" />
+        <activity android:name=".ui.SettingsActivity" android:screenOrientation="portrait" />
 
         <!-- Profiles management screens (Settings-only access) -->
-        <activity android:name=".ui.profile.ProfilesListActivity" android:exported="false" />
-        <activity android:name=".ui.profile.ProfilePreviewActivity" android:exported="false" />
-        <activity android:name=".ui.profile.ProfileEditorActivity" android:exported="false" />
+        <activity android:name=".ui.profile.ProfilesListActivity" android:exported="false" android:screenOrientation="portrait" />
+        <activity android:name=".ui.profile.ProfilePreviewActivity" android:exported="false" android:screenOrientation="portrait" />
+        <activity android:name=".ui.profile.ProfileEditorActivity" android:exported="false" android:screenOrientation="portrait" />
 
         <activity
             android:name=".ui.SplashActivity"
             android:exported="true"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.ZenWall" />
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.ZenWall.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
