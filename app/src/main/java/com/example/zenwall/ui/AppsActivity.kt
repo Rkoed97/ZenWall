@@ -50,7 +50,7 @@ class AppsActivity : ComponentActivity() {
     }
 }
 
- data class AppEntry(val pkg: String, val label: String, val isSystem: Boolean, val icon: Drawable)
+ data class AppEntry(val pkg: String, val label: String, val isSystem: Boolean)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,16 +67,15 @@ private fun AppsScreen(
     var selected by remember { mutableStateOf(setOf<String>()) }
     val scope = rememberCoroutineScope()
 
-    // Load installed apps and current selection
-    LaunchedEffect(showSystem) {
-        val apps = pm.getInstalledApplications(0).map { ai: ApplicationInfo ->
-            val label = ai.loadLabel(pm).toString()
-            val isSystem = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            val icon = ai.loadIcon(pm)
-            AppEntry(ai.packageName, label, isSystem, icon)
-        }.filter { showSystem || !it.isSystem }
-            .sortedBy { it.label.lowercase() }
-        allApps = apps
+    // Observe preloaded apps from repository and build a filtered list in-memory
+    val appsRepo = remember { com.example.zenwall.data.InstalledAppsRepository.get(context) }
+    LaunchedEffect(Unit) { appsRepo.ensurePreloaded() }
+    val repoApps by appsRepo.apps.collectAsState()
+    val loading by appsRepo.isLoading.collectAsState()
+
+    LaunchedEffect(repoApps, showSystem) {
+        val base = if (showSystem) repoApps else repoApps.filter { !it.isSystem }
+        allApps = base.map { AppEntry(it.pkg, it.label, it.isSystem) }
     }
     LaunchedEffect(Unit) {
         val repo = AppRulesRepo(context)
@@ -187,13 +186,21 @@ private fun AppRow(app: AppEntry, checked: Boolean, onCheckedChange: (Boolean) -
             modifier = Modifier.weight(1f).clickable { onCheckedChange(!checked) },
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val bmp = remember(app.pkg) { app.icon.toBitmap() }
-            Image(
-                bitmap = bmp.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.size(40.dp)
-            )
-            Spacer(Modifier.width(12.dp))
+            // Load icon lazily per item to avoid heavy preloading
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val pm = context.packageManager
+            val drawable = remember(app.pkg) { runCatching { pm.getApplicationIcon(app.pkg) }.getOrNull() }
+            if (drawable != null) {
+                val bmp = remember(app.pkg) { drawable.toBitmap() }
+                Image(
+                    bitmap = bmp.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+            } else {
+                Spacer(Modifier.width(52.dp)) // reserve space when icon missing
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(app.label)
                 Text(app.pkg, style = MaterialTheme.typography.bodySmall)

@@ -42,6 +42,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
@@ -67,7 +68,7 @@ class ProfileEditorActivity : ComponentActivity() {
     }
 }
 
-private data class AppUi(val pkg: String, val label: String, val isSystem: Boolean, val icon: android.graphics.drawable.Drawable)
+private data class AppUi(val pkg: String, val label: String, val isSystem: Boolean)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,13 +82,12 @@ private fun ProfileEditorScreen(profileId: Long?, onBack: () -> Unit) {
     var query by remember { mutableStateOf("") }
     val scope = remember { MainScope() }
 
-    // Load installed apps
-    LaunchedEffect(Unit) {
-        val pm = context.packageManager
-        val apps = pm.getInstalledApplications(0).map { ai: ApplicationInfo ->
-            AppUi(ai.packageName, ai.loadLabel(pm).toString(), (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0, ai.loadIcon(pm))
-        }.filter { !it.isSystem }.sortedBy { it.label.lowercase() }
-        allApps = apps
+    // Observe preloaded apps from repository (no icons here), filter out system apps
+    val appsRepo = remember { com.example.zenwall.data.InstalledAppsRepository.get(context) }
+    LaunchedEffect(Unit) { appsRepo.ensurePreloaded() }
+    val repoApps by appsRepo.apps.collectAsState()
+    LaunchedEffect(repoApps) {
+        allApps = repoApps.filter { !it.isSystem }.map { com.example.zenwall.ui.profile.AppUi(it.pkg, it.label, it.isSystem) }
     }
 
     // If editing, load existing profile
@@ -160,13 +160,21 @@ private fun AppSelectRow(app: AppUi, checked: Boolean, onCheckedChange: (Boolean
             modifier = Modifier.weight(1f).clickable { onCheckedChange(!checked) },
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val bmp = remember(app.pkg) { app.icon.toBitmap() }
-            Image(
-                bitmap = bmp.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.size(40.dp)
-            )
-            Spacer(Modifier.width(12.dp))
+            // Lazy icon loading per app item
+            val context = LocalContext.current
+            val pm = context.packageManager
+            val drawable = remember(app.pkg) { runCatching { pm.getApplicationIcon(app.pkg) }.getOrNull() }
+            if (drawable != null) {
+                val bmp = remember(app.pkg) { drawable.toBitmap() }
+                Image(
+                    bitmap = bmp.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+            } else {
+                Spacer(Modifier.width(52.dp))
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(app.label)
                 Text(app.pkg, style = MaterialTheme.typography.bodySmall)
