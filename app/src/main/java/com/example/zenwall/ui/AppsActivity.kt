@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -125,6 +126,11 @@ private fun AppsScreen(
                     Icon(Icons.Filled.Apps, contentDescription = "Manage Apps")
                     Spacer(Modifier.width(8.dp))
                     Text("Manage Apps")
+                }
+                TextButton(onClick = { context.startActivity(Intent(context, SettingsActivity::class.java)) }) {
+                    Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                    Spacer(Modifier.width(8.dp))
+                    Text("Settings")
                 }
             }
         }
