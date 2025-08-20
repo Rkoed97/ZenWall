@@ -180,6 +180,27 @@ class MainActivity : FragmentActivity() {
                         } else {
                             Text("Active profile: ${activeProfile!!.name} (${modeText})", style = MaterialTheme.typography.bodyMedium)
                         }
+
+                        // Keep global AppRules in sync with the active profile and auto-activate sole profile
+                        val profiles by profileRepo.profilesFlow.collectAsState(initial = emptyList())
+                        val activeId by profileRepo.activeProfileIdFlow.collectAsState(initial = null)
+                        val appRulesRepo = remember { com.example.zenwall.data.AppRulesRepo(ctx) }
+                        LaunchedEffect(activeId, profiles) {
+                            val currentActive = activeId
+                            if (currentActive == null && profiles.size == 1) {
+                                val only = profiles.first()
+                                profileRepo.setActiveProfile(only.id)
+                                appRulesRepo.setWhitelistMode(only.mode == com.example.zenwall.data.ProfileRepository.ProfileMode.WHITELIST)
+                                appRulesRepo.setBlockedPackages(only.apps.toSet())
+                            } else if (currentActive != null) {
+                                val p = profiles.firstOrNull { it.id == currentActive }
+                                if (p != null) {
+                                    appRulesRepo.setWhitelistMode(p.mode == com.example.zenwall.data.ProfileRepository.ProfileMode.WHITELIST)
+                                    appRulesRepo.setBlockedPackages(p.apps.toSet())
+                                }
+                            }
+                        }
+
                         Spacer(Modifier.height(16.dp))
 
                         val running by com.example.zenwall.vpn.ZenWallVpnService.isRunning.collectAsState(initial = false)

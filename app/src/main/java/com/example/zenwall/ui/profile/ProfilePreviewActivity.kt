@@ -25,7 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.zenwall.data.ProfileRepository
+import com.example.zenwall.data.AppRulesRepo
 import com.example.zenwall.ui.theme.ZenWallTheme
+import kotlinx.coroutines.launch
 
 class ProfilePreviewActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,6 +47,8 @@ private fun ProfilePreviewScreen(profileId: Long, onBack: () -> Unit) {
     val context = LocalContext.current
     val repo = remember { ProfileRepository(context) }
     val profile by repo.getProfileFlow(profileId).collectAsState(initial = null)
+    val activeId by repo.activeProfileIdFlow.collectAsState(initial = null)
+    val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
 
     val filtered = remember(profile, query) {
@@ -58,11 +62,25 @@ private fun ProfilePreviewScreen(profileId: Long, onBack: () -> Unit) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
         }, actions = {
             val ctx = LocalContext.current
-            if (profile != null) {
+            val p = profile
+            if (p != null) {
+                // Set as Active
+                androidx.compose.material3.TextButton(
+                    enabled = p.id != (activeId ?: -1L),
+                    onClick = {
+                        scope.launch {
+                            repo.setActiveProfile(p.id)
+                            val appRules = AppRulesRepo(ctx)
+                            appRules.setWhitelistMode(p.mode == ProfileRepository.ProfileMode.WHITELIST)
+                            appRules.setBlockedPackages(p.apps.toSet())
+                        }
+                    }
+                ) { Text("Set as Active") }
+                // Edit
                 androidx.compose.material3.TextButton(onClick = {
                     ctx.startActivity(android.content.Intent(ctx, ProfileEditorActivity::class.java)
                         .putExtra("fromSettings", true)
-                        .putExtra("profileId", profile!!.id))
+                        .putExtra("profileId", p.id))
                 }) { Text("Edit") }
             }
         })

@@ -17,6 +17,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,6 +27,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,6 +67,7 @@ private fun ProfilesListScreen(onBack: () -> Unit) {
     val repo = remember { ProfileRepository(context) }
     val appRulesRepo = remember { AppRulesRepo(context) }
     val profiles by repo.profilesFlow.collectAsState(initial = emptyList())
+    val activeId by repo.activeProfileIdFlow.collectAsState(initial = null)
     val scope = remember { MainScope() }
 
     LaunchedEffect(Unit) {
@@ -70,6 +75,23 @@ private fun ProfilesListScreen(onBack: () -> Unit) {
         val legacyMode = appRulesRepo.getWhitelistModeOnce()
         val legacyApps = appRulesRepo.getBlockedPackagesOnce()
         repo.ensureDefaultProfileIfEmpty(legacyMode, legacyApps)
+    }
+
+    // Keep AppRules in sync with active profile and auto-activate sole profile
+    LaunchedEffect(activeId, profiles) {
+        val currentActive = activeId
+        if (currentActive == null && profiles.size == 1) {
+            val only = profiles.first()
+            repo.setActiveProfile(only.id)
+            appRulesRepo.setWhitelistMode(only.mode == ProfileRepository.ProfileMode.WHITELIST)
+            appRulesRepo.setBlockedPackages(only.apps.toSet())
+        } else if (currentActive != null) {
+            val p = profiles.firstOrNull { it.id == currentActive }
+            if (p != null) {
+                appRulesRepo.setWhitelistMode(p.mode == ProfileRepository.ProfileMode.WHITELIST)
+                appRulesRepo.setBlockedPackages(p.apps.toSet())
+            }
+        }
     }
 
     Scaffold(topBar = {
@@ -98,14 +120,22 @@ private fun ProfilesListScreen(onBack: () -> Unit) {
                                     val modeText = if (p.mode == ProfileRepository.ProfileMode.WHITELIST) "Whitelist" else "Blacklist"
                                     Text("$modeText • ${p.apps.size} apps", style = MaterialTheme.typography.bodySmall)
                                 }
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    TextButton(onClick = {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(selected = p.id == (activeId ?: -1L), onClick = {
+                                        scope.launch {
+                                            repo.setActiveProfile(p.id)
+                                            // sync app settings with active profile
+                                            appRulesRepo.setWhitelistMode(p.mode == ProfileRepository.ProfileMode.WHITELIST)
+                                            appRulesRepo.setBlockedPackages(p.apps.toSet())
+                                        }
+                                    })
+                                    IconButton(onClick = {
                                         context.startActivity(Intent(context, ProfilePreviewActivity::class.java)
                                             .putExtra("fromSettings", true)
                                             .putExtra("profileId", p.id))
-                                    }) { Text("Preview") }
-                                    TextButton(onClick = { scope.launch { repo.duplicateProfile(p.id) } }) { Text("Duplicate") }
-                                    TextButton(onClick = { scope.launch { repo.deleteProfile(p.id) } }) { Text("Delete") }
+                                    }) { Icon(Icons.Filled.Visibility, contentDescription = "Preview") }
+                                    IconButton(onClick = { scope.launch { repo.duplicateProfile(p.id) } }) { Icon(Icons.Filled.ContentCopy, contentDescription = "Duplicate") }
+                                    IconButton(onClick = { scope.launch { repo.deleteProfile(p.id) } }) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
                                 }
                             }
                         }
