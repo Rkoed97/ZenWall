@@ -129,38 +129,17 @@ class MainActivity : FragmentActivity() {
                         )
                     },
                     bottomBar = {
-                        BottomAppBar {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                TextButton(onClick = {
-                                    val intent = Intent(this@MainActivity, MainActivity::class.java)
-                                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                                    startActivity(intent)
-                                }) {
-                                    Icon(Icons.Filled.Home, contentDescription = "Home")
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Home")
-                                }
-                                TextButton(onClick = { startActivity(Intent(this@MainActivity, HistoryActivity::class.java)) }) {
-                                    Icon(Icons.Filled.History, contentDescription = "Overview")
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Overview")
-                                }
-                                TextButton(onClick = { startActivity(Intent(this@MainActivity, AppsActivity::class.java)) }) {
-                                    Icon(Icons.Filled.Apps, contentDescription = "Manage Apps")
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Manage Apps")
-                                }
-                                TextButton(onClick = { startActivity(Intent(this@MainActivity, com.example.zenwall.ui.SettingsActivity::class.java)) }) {
-                                    Icon(Icons.Filled.Settings, contentDescription = "Settings")
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Settings")
-                                }
-                            }
-                        }
+                        com.example.zenwall.ui.common.ZenBottomBar(
+                            selected = com.example.zenwall.ui.common.BottomTab.Home,
+                            onHome = {
+                                val intent = Intent(this@MainActivity, MainActivity::class.java)
+                                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                startActivity(intent)
+                            },
+                            onOverview = { startActivity(Intent(this@MainActivity, HistoryActivity::class.java)) },
+                            onApps = { startActivity(Intent(this@MainActivity, AppsActivity::class.java)) },
+                            onSettings = { startActivity(Intent(this@MainActivity, com.example.zenwall.ui.SettingsActivity::class.java)) }
+                        )
                     }
                 ) { innerPadding ->
                     // Centered large Start/Stop controls

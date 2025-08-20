@@ -96,34 +96,13 @@ private fun SettingsScreen(vm: com.example.zenwall.ui.MainViewModel, onClose: ()
             )
         },
         bottomBar = {
-            androidx.compose.material3.BottomAppBar {
-                androidx.compose.foundation.layout.Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly,
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                ) {
-                    androidx.compose.material3.TextButton(onClick = { context.startActivity(android.content.Intent(context, com.example.zenwall.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)) }) {
-                        Icon(Icons.Filled.Home, contentDescription = "Home")
-                        Spacer(Modifier.width(8.dp))
-                        Text("Home")
-                    }
-                    androidx.compose.material3.TextButton(onClick = { context.startActivity(android.content.Intent(context, HistoryActivity::class.java)) }) {
-                        Icon(Icons.Filled.History, contentDescription = "Overview")
-                        Spacer(Modifier.width(8.dp))
-                        Text("Overview")
-                    }
-                    androidx.compose.material3.TextButton(onClick = { context.startActivity(android.content.Intent(context, AppsActivity::class.java)) }) {
-                        Icon(Icons.Filled.Apps, contentDescription = "Manage Apps")
-                        Spacer(Modifier.width(8.dp))
-                        Text("Manage Apps")
-                    }
-                    androidx.compose.material3.TextButton(onClick = { /* already here */ }) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
-                        Spacer(Modifier.width(8.dp))
-                        Text("Settings")
-                    }
-                }
-            }
+            com.example.zenwall.ui.common.ZenBottomBar(
+                selected = com.example.zenwall.ui.common.BottomTab.Settings,
+                onHome = { context.startActivity(android.content.Intent(context, com.example.zenwall.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)) },
+                onOverview = { context.startActivity(android.content.Intent(context, HistoryActivity::class.java)) },
+                onApps = { context.startActivity(android.content.Intent(context, AppsActivity::class.java)) },
+                onSettings = { /* already here */ }
+            )
         }
     ) { innerPadding ->
         Column(

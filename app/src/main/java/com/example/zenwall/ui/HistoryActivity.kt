@@ -139,34 +139,13 @@ private fun HistoryScreen(
             )
         },
         bottomBar = {
-            BottomAppBar {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onGoHome) {
-                        Icon(Icons.Filled.Home, contentDescription = "Home")
-                        Spacer(Modifier.width(8.dp))
-                        Text("Home")
-                    }
-                    TextButton(onClick = onGoOverview) {
-                        Icon(Icons.Filled.History, contentDescription = "Overview")
-                        Spacer(Modifier.width(8.dp))
-                        Text("Overview")
-                    }
-                    TextButton(onClick = onGoManage) {
-                        Icon(Icons.Filled.Apps, contentDescription = "Manage Apps")
-                        Spacer(Modifier.width(8.dp))
-                        Text("Manage Apps")
-                    }
-                    TextButton(onClick = { context.startActivity(Intent(context, SettingsActivity::class.java)) }) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
-                        Spacer(Modifier.width(8.dp))
-                        Text("Settings")
-                    }
-                }
-            }
+            com.example.zenwall.ui.common.ZenBottomBar(
+                selected = com.example.zenwall.ui.common.BottomTab.Overview,
+                onHome = onGoHome,
+                onOverview = onGoOverview,
+                onApps = onGoManage,
+                onSettings = { context.startActivity(Intent(context, SettingsActivity::class.java)) }
+            )
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
