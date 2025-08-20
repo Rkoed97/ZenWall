@@ -62,6 +62,12 @@
 
         <activity android:name=".ui.HistoryActivity" />
         <activity android:name=".ui.AppsActivity" />
+        <activity android:name=".ui.SettingsActivity" />
+
+        <!-- Profiles management screens (Settings-only access) -->
+        <activity android:name=".ui.profile.ProfilesListActivity" android:exported="false" />
+        <activity android:name=".ui.profile.ProfilePreviewActivity" android:exported="false" />
+        <activity android:name=".ui.profile.ProfileEditorActivity" android:exported="false" />
 
         <activity
             android:name=".ui.SplashActivity"

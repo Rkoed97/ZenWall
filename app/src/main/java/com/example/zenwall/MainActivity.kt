@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
@@ -114,123 +115,148 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         setContent {
             ZenWallTheme {
-                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-                val scope = rememberCoroutineScope()
-
-                ModalNavigationDrawer(
-                    drawerState = drawerState,
-                    drawerContent = {
-                        ModalDrawerSheet {
-                            DrawerModeContent(vm, onClose = { scope.launch { drawerState.close() } })
-                        }
-                    }
-                ) {
-                    Scaffold(
-                        modifier = Modifier.fillMaxSize(),
-                        topBar = {
-                            TopAppBar(
-                                title = { Text("ZenWall") },
-                                navigationIcon = {
-                                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                        Icon(Icons.Filled.Menu, contentDescription = "Open menu")
-                                    }
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    topBar = {
+                        TopAppBar(
+                            title = { Text("ZenWall") }
+                        )
+                    },
+                    bottomBar = {
+                        BottomAppBar {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                TextButton(onClick = {
+                                    val intent = Intent(this@MainActivity, MainActivity::class.java)
+                                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                    startActivity(intent)
+                                }) {
+                                    Icon(Icons.Filled.Home, contentDescription = "Home")
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Home")
                                 }
-                            )
-                        },
-                        bottomBar = {
-                            BottomAppBar {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.SpaceEvenly,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    TextButton(onClick = {
-                                        val intent = Intent(this@MainActivity, MainActivity::class.java)
-                                            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                                        startActivity(intent)
-                                    }) {
-                                        Icon(Icons.Filled.Home, contentDescription = "Home")
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("Home")
-                                    }
-                                    TextButton(onClick = { startActivity(Intent(this@MainActivity, HistoryActivity::class.java)) }) {
-                                        Icon(Icons.Filled.History, contentDescription = "Overview")
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("Overview")
-                                    }
-                                    TextButton(onClick = { startActivity(Intent(this@MainActivity, AppsActivity::class.java)) }) {
-                                        Icon(Icons.Filled.Apps, contentDescription = "Manage Apps")
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("Manage Apps")
-                                    }
+                                TextButton(onClick = { startActivity(Intent(this@MainActivity, HistoryActivity::class.java)) }) {
+                                    Icon(Icons.Filled.History, contentDescription = "Overview")
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Overview")
+                                }
+                                TextButton(onClick = { startActivity(Intent(this@MainActivity, AppsActivity::class.java)) }) {
+                                    Icon(Icons.Filled.Apps, contentDescription = "Manage Apps")
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Manage Apps")
+                                }
+                                TextButton(onClick = { startActivity(Intent(this@MainActivity, com.example.zenwall.ui.SettingsActivity::class.java)) }) {
+                                    Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Settings")
                                 }
                             }
                         }
-                    ) { innerPadding ->
-                        // Centered large Start/Stop controls
-                        Column(
+                    }
+                ) { innerPadding ->
+                    // Centered large Start/Stop controls
+                    Column(
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Show active profile name and mode
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
+                        val profileRepo = remember { com.example.zenwall.data.ProfileRepository(ctx) }
+                        val activeProfile by profileRepo.activeProfileFlow.collectAsState(initial = null)
+                        val modeText = when (activeProfile?.mode) {
+                            com.example.zenwall.data.ProfileRepository.ProfileMode.WHITELIST -> "Whitelist"
+                            com.example.zenwall.data.ProfileRepository.ProfileMode.BLACKLIST -> "Blacklist"
+                            null -> null
+                        }
+                        if (activeProfile == null) {
+                            Text("No active profile", style = MaterialTheme.typography.bodyMedium)
+                        } else {
+                            Text("Active profile: ${activeProfile!!.name} (${modeText})", style = MaterialTheme.typography.bodyMedium)
+                        }
+
+                        // Keep global AppRules in sync with the active profile and auto-activate sole profile
+                        val profiles by profileRepo.profilesFlow.collectAsState(initial = emptyList())
+                        val activeId by profileRepo.activeProfileIdFlow.collectAsState(initial = null)
+                        val appRulesRepo = remember { com.example.zenwall.data.AppRulesRepo(ctx) }
+                        LaunchedEffect(activeId, profiles) {
+                            val currentActive = activeId
+                            if (currentActive == null && profiles.size == 1) {
+                                val only = profiles.first()
+                                profileRepo.setActiveProfile(only.id)
+                                appRulesRepo.setWhitelistMode(only.mode == com.example.zenwall.data.ProfileRepository.ProfileMode.WHITELIST)
+                                appRulesRepo.setBlockedPackages(only.apps.toSet())
+                            } else if (currentActive != null) {
+                                val p = profiles.firstOrNull { it.id == currentActive }
+                                if (p != null) {
+                                    appRulesRepo.setWhitelistMode(p.mode == com.example.zenwall.data.ProfileRepository.ProfileMode.WHITELIST)
+                                    appRulesRepo.setBlockedPackages(p.apps.toSet())
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        val running by com.example.zenwall.vpn.ZenWallVpnService.isRunning.collectAsState(initial = false)
+
+                        // Big round toggle button with heartbeat when ON
+                        val targetScale = if (running) 1.08f else 1f
+                        val infinite = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse")
+                        val pulse by infinite.animateFloat(
+                            initialValue = 1f,
+                            targetValue = targetScale,
+                            animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                                animation = androidx.compose.animation.core.tween(durationMillis = 900),
+                                repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                            ),
+                            label = "pulseAnim"
+                        )
+                        val scale = if (running) pulse else 1f
+
+                        val bgColor = if (running) androidx.compose.ui.graphics.Color(0xFF81C784) else androidx.compose.ui.graphics.Color(0xFF424242)
+                        val text = if (running) "Turn Off" else "Turn On"
+
+                        androidx.compose.material3.Surface(
                             modifier = Modifier
-                                .padding(innerPadding)
-                                .fillMaxSize()
-                                .padding(24.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            val running by com.example.zenwall.vpn.ZenWallVpnService.isRunning.collectAsState(initial = false)
-
-                            // Big round toggle button with heartbeat when ON
-                            val targetScale = if (running) 1.08f else 1f
-                            val infinite = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse")
-                            val pulse by infinite.animateFloat(
-                                initialValue = 1f,
-                                targetValue = targetScale,
-                                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-                                    animation = androidx.compose.animation.core.tween(durationMillis = 900),
-                                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-                                ),
-                                label = "pulseAnim"
-                            )
-                            val scale = if (running) pulse else 1f
-
-                            val bgColor = if (running) androidx.compose.ui.graphics.Color(0xFF81C784) else androidx.compose.ui.graphics.Color(0xFF424242)
-                            val text = if (running) "Turn Off" else "Turn On"
-
-                            androidx.compose.material3.Surface(
-                                modifier = Modifier
-                                    .size(200.dp)
-                                    .graphicsLayer(scaleX = scale, scaleY = scale),
-                                shape = androidx.compose.foundation.shape.CircleShape,
-                                color = bgColor,
-                                tonalElevation = if (running) 6.dp else 2.dp,
-                                shadowElevation = if (running) 12.dp else 4.dp,
-                                onClick = {
-                                    authenticateThen {
-                                        if (running) {
-                                            val intent = Intent(this@MainActivity, ZenWallVpnService::class.java).setAction(ZenWallVpnService.ACTION_STOP)
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                                startForegroundService(intent)
-                                            } else {
-                                                startService(intent)
-                                            }
+                                .size(200.dp)
+                                .graphicsLayer(scaleX = scale, scaleY = scale),
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = bgColor,
+                            tonalElevation = if (running) 6.dp else 2.dp,
+                            shadowElevation = if (running) 12.dp else 4.dp,
+                            onClick = {
+                                authenticateThen {
+                                    if (running) {
+                                        val intent = Intent(this@MainActivity, ZenWallVpnService::class.java).setAction(ZenWallVpnService.ACTION_STOP)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                            startForegroundService(intent)
                                         } else {
-                                            val prep = android.net.VpnService.prepare(this@MainActivity)
-                                            if (prep != null) {
-                                                vpnPermissionLauncher.launch(prep)
-                                            } else {
-                                                startVpnService()
-                                            }
+                                            startService(intent)
+                                        }
+                                    } else {
+                                        val prep = android.net.VpnService.prepare(this@MainActivity)
+                                        if (prep != null) {
+                                            vpnPermissionLauncher.launch(prep)
+                                        } else {
+                                            startVpnService()
                                         }
                                     }
                                 }
-                            ) {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Filled.PowerSettingsNew,
-                                        contentDescription = text,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(120.dp)
-                                    )
-                                }
+                            }
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.PowerSettingsNew,
+                                    contentDescription = text,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(120.dp)
+                                )
                             }
                         }
                     }
@@ -249,28 +275,3 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-@Composable
-private fun DrawerModeContent(vm: com.example.zenwall.ui.MainViewModel, onClose: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val mode by vm.whitelistMode.collectAsState(initial = false)
-    Column(modifier = Modifier.padding(16.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Settings", style = MaterialTheme.typography.titleMedium)
-            IconButton(onClick = onClose) {
-                Icon(Icons.Filled.Close, contentDescription = "Close menu")
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Text("Mode", style = MaterialTheme.typography.titleSmall)
-        Spacer(Modifier.height(8.dp))
-        Text(if (mode) "Whitelist (only selected apps can access internet)" else "Blacklist (selected apps are blocked)")
-        androidx.compose.material3.Switch(
-            checked = mode,
-            onCheckedChange = { enabled ->
-                vm.setWhitelistMode(enabled)
-                Toast.makeText(context, "Restart the VPN for changes to take effect", Toast.LENGTH_LONG).show()
-            },
-            modifier = Modifier.padding(top = 8.dp)
-        )
-    }
-}
