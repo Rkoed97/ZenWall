@@ -3,15 +3,20 @@ package com.example.zenwall.ui.profile
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -21,9 +26,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import com.example.zenwall.data.ProfileRepository
 import com.example.zenwall.data.AppRulesRepo
 import com.example.zenwall.ui.theme.ZenWallTheme
@@ -50,11 +58,24 @@ private fun ProfilePreviewScreen(profileId: Long, onBack: () -> Unit) {
     val activeId by repo.activeProfileIdFlow.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
+    val pm = context.packageManager
 
-    val filtered = remember(profile, query) {
-        val q = query.trim().lowercase()
+    val allEntries = remember(profile) {
         val apps = profile?.apps ?: emptyList()
-        if (q.isEmpty()) apps else apps.filter { it.lowercase().contains(q) }
+        apps.map { pkg ->
+            Triple(
+                pkg,
+                runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrElse { pkg },
+                runCatching { pm.getApplicationIcon(pkg) }.getOrNull()
+            )
+        }
+    }
+
+    val filtered = remember(allEntries, query) {
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) allEntries else allEntries.filter { (pkg, label, _) ->
+            pkg.lowercase().contains(q) || label.lowercase().contains(q)
+        }
     }
 
     Scaffold(topBar = {
@@ -77,11 +98,11 @@ private fun ProfilePreviewScreen(profileId: Long, onBack: () -> Unit) {
                     }
                 ) { Text("Set as Active") }
                 // Edit
-                androidx.compose.material3.TextButton(onClick = {
+                IconButton(onClick = {
                     ctx.startActivity(android.content.Intent(ctx, ProfileEditorActivity::class.java)
                         .putExtra("fromSettings", true)
                         .putExtra("profileId", p.id))
-                }) { Text("Edit") }
+                }) { Icon(Icons.Filled.Edit, contentDescription = "Edit profile") }
             }
         })
     }) { padding ->
@@ -95,9 +116,34 @@ private fun ProfilePreviewScreen(profileId: Long, onBack: () -> Unit) {
             Spacer(Modifier.padding(8.dp))
             OutlinedTextField(value = query, onValueChange = { query = it }, label = { Text("Search apps") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.padding(8.dp))
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(filtered) { pkg ->
-                    Text(pkg, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
+
+            val listTitle = if (profile?.mode == ProfileRepository.ProfileMode.BLACKLIST) "Blocked apps" else "Allowed apps"
+            Text("$listTitle (${filtered.size})", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.padding(8.dp))
+
+            if (filtered.isEmpty()) {
+                Text("No apps selected.")
+            } else {
+                LazyColumn(Modifier.fillMaxSize()) {
+                    items(filtered, key = { it.first }) { (pkg, label, icon) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            icon?.let {
+                                Image(
+                                    bitmap = it.toBitmap().asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                                Spacer(Modifier.width(16.dp))
+                            }
+                            Column {
+                                Text(label)
+                                Text(pkg, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
                 }
             }
         }

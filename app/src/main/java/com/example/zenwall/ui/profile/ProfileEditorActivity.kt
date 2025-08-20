@@ -6,15 +6,23 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Checkbox
@@ -27,16 +35,22 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.example.zenwall.data.ProfileRepository
@@ -113,10 +127,13 @@ private fun ProfileEditorScreen(profileId: Long?, onBack: () -> Unit) {
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
             OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Profile name") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.padding(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Mode:")
-                TextButton(onClick = { mode = ProfileRepository.ProfileMode.WHITELIST }, enabled = mode != ProfileRepository.ProfileMode.WHITELIST) { Text("Whitelist") }
-                TextButton(onClick = { mode = ProfileRepository.ProfileMode.BLACKLIST }, enabled = mode != ProfileRepository.ProfileMode.BLACKLIST) { Text("Blacklist") }
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Mode", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.padding(4.dp))
+                ModeSegmentedControl(
+                    selected = mode,
+                    onSelected = { selectedMode -> mode = selectedMode }
+                )
             }
             Spacer(Modifier.padding(8.dp))
             OutlinedTextField(value = query, onValueChange = { query = it }, label = { Text("Search apps") }, modifier = Modifier.fillMaxWidth())
@@ -134,15 +151,110 @@ private fun ProfileEditorScreen(profileId: Long?, onBack: () -> Unit) {
 
 @Composable
 private fun AppSelectRow(app: AppUi, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-        Row(modifier = Modifier.weight(1f).clickable { onCheckedChange(!checked) }, verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f).clickable { onCheckedChange(!checked) },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             val bmp = remember(app.pkg) { app.icon.toBitmap() }
-            Image(bitmap = bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.padding(end = 12.dp))
+            Image(
+                bitmap = bmp.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.size(40.dp)
+            )
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(app.label, style = MaterialTheme.typography.bodyLarge)
+                Text(app.label)
                 Text(app.pkg, style = MaterialTheme.typography.bodySmall)
             }
         }
         Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+
+@Composable
+private fun ModeSegmentedControl(
+    selected: ProfileRepository.ProfileMode,
+    onSelected: (ProfileRepository.ProfileMode) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(999.dp)
+    var containerWidthPx by remember { mutableStateOf(0) }
+    val density = LocalDensity.current
+    val containerWidthDp = with(density) { containerWidthPx.toDp() }
+    val segmentWidthDp = if (containerWidthPx == 0) 0.dp else containerWidthDp / 2
+
+    val targetOffset = when (selected) {
+        ProfileRepository.ProfileMode.WHITELIST -> 0.dp
+        ProfileRepository.ProfileMode.BLACKLIST -> segmentWidthDp
+    }
+    val animatedOffset by animateDpAsState(targetValue = targetOffset, label = "pillOffset")
+
+    val pillColorTarget = when (selected) {
+        ProfileRepository.ProfileMode.WHITELIST -> scheme.primary
+        ProfileRepository.ProfileMode.BLACKLIST -> scheme.error
+    }
+    val pillColor by androidx.compose.animation.animateColorAsState(targetValue = pillColorTarget, label = "pillColor")
+    val borderColor = scheme.outlineVariant
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .clip(shape)
+            .border(1.dp, borderColor, shape)
+            .onGloballyPositioned { containerWidthPx = it.size.width }
+    ) {
+        if (segmentWidthDp > 0.dp) {
+            Box(
+                modifier = Modifier
+                    .offset(x = animatedOffset)
+                    .width(segmentWidthDp)
+                    .fillMaxHeight()
+                    .clip(shape)
+                    .background(pillColor)
+            )
+        }
+        Row(Modifier.fillMaxSize()) {
+            val activeContentColor = contentColorFor(pillColor)
+            val inactiveColor = scheme.onSurface
+            val inactiveAlpha = 0.7f
+
+            // Whitelist segment
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable { onSelected(ProfileRepository.ProfileMode.WHITELIST) },
+                contentAlignment = Alignment.Center
+            ) {
+                val isActive = selected == ProfileRepository.ProfileMode.WHITELIST
+                Text(
+                    text = "Whitelist",
+                    color = if (isActive) activeContentColor else inactiveColor.copy(alpha = inactiveAlpha),
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+            // Blacklist segment
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable { onSelected(ProfileRepository.ProfileMode.BLACKLIST) },
+                contentAlignment = Alignment.Center
+            ) {
+                val isActive = selected == ProfileRepository.ProfileMode.BLACKLIST
+                Text(
+                    text = "Blacklist",
+                    color = if (isActive) activeContentColor else inactiveColor.copy(alpha = inactiveAlpha),
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+        }
     }
 }
