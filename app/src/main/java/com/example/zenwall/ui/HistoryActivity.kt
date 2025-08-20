@@ -117,6 +117,22 @@ private fun HistoryScreen(
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+            // Active profile info
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            val profileRepo = remember { com.example.zenwall.data.ProfileRepository(ctx) }
+            val activeProfile by profileRepo.activeProfileFlow.collectAsState(initial = null)
+            val modeText = when (activeProfile?.mode) {
+                com.example.zenwall.data.ProfileRepository.ProfileMode.WHITELIST -> "Whitelist"
+                com.example.zenwall.data.ProfileRepository.ProfileMode.BLACKLIST -> "Blacklist"
+                null -> null
+            }
+            if (activeProfile == null) {
+                Text("No active profile", style = MaterialTheme.typography.bodyMedium)
+            } else {
+                Text("Active profile: ${activeProfile!!.name} (${modeText})", style = MaterialTheme.typography.bodyMedium)
+            }
+            Spacer(Modifier.height(12.dp))
+
             Text("Blocked apps (${entries.size})", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
             if (entries.isEmpty()) {

@@ -166,6 +166,22 @@ class MainActivity : FragmentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        // Show active profile name and mode
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
+                        val profileRepo = remember { com.example.zenwall.data.ProfileRepository(ctx) }
+                        val activeProfile by profileRepo.activeProfileFlow.collectAsState(initial = null)
+                        val modeText = when (activeProfile?.mode) {
+                            com.example.zenwall.data.ProfileRepository.ProfileMode.WHITELIST -> "Whitelist"
+                            com.example.zenwall.data.ProfileRepository.ProfileMode.BLACKLIST -> "Blacklist"
+                            null -> null
+                        }
+                        if (activeProfile == null) {
+                            Text("No active profile", style = MaterialTheme.typography.bodyMedium)
+                        } else {
+                            Text("Active profile: ${activeProfile!!.name} (${modeText})", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Spacer(Modifier.height(16.dp))
+
                         val running by com.example.zenwall.vpn.ZenWallVpnService.isRunning.collectAsState(initial = false)
 
                         // Big round toggle button with heartbeat when ON

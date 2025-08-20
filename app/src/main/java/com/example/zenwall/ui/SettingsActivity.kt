@@ -113,9 +113,15 @@ private fun SettingsScreen(vm: com.example.zenwall.ui.MainViewModel, onClose: ()
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            // Placeholder for future settings
+            // Profiles management entry
             Spacer(Modifier.height(24.dp))
-            Text("More settings coming soon", style = MaterialTheme.typography.bodyMedium)
+            androidx.compose.material3.Button(onClick = {
+                val intent = android.content.Intent(context, com.example.zenwall.ui.profile.ProfilesListActivity::class.java)
+                    .putExtra("fromSettings", true)
+                context.startActivity(intent)
+            }) {
+                Text("Profiles")
+            }
         }
     }
 }
