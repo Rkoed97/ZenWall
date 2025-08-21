@@ -70,6 +70,34 @@ This makes ZenWall one of the most privacy-respecting, lightweight, and effectiv
 
 ---
 
+## Profiles: Quickly manage blocked/allowed apps
+
+ZenWall Profiles let you save named sets of rules so you can switch your firewall setup in seconds.
+
+What a profile contains:
+- Mode: Whitelist (only listed apps are allowed) or Blacklist (listed apps are blocked).
+- App selection: the list of apps to allow/block based on the chosen mode.
+
+Create or edit profiles:
+- Open Settings → Profiles.
+- Tap + to create a profile, give it a name, choose a mode, and pick apps.
+- Tap a profile to preview it; use Edit to change it or Duplicate to make a copy.
+
+Switch/apply profiles:
+- In the Profiles list, select the radio button to set a profile as Active; or open a profile and tap "Set as Active".
+- Activating a profile immediately applies its mode and app list to ZenWall’s rules, updating the allowed/blocked apps accordingly.
+
+Why profiles are faster:
+- Prepare profiles for different contexts (e.g., Work, Travel/Whitelist, Kids, Gaming).
+- Switch in one tap instead of manually toggling dozens of apps each time.
+
+Notes:
+- Only one profile can be active at a time.
+- If no profiles exist, ZenWall may create a default one from your current settings.
+- Changes usually take effect immediately; if your device caches rules, toggling the ZenWall VPN off/on will refresh them.
+
+---
+
 ## License
 
 ZenWall is open source, released under the **MIT License**.  
