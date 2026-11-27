@@ -166,15 +166,9 @@ class MainActivity : FragmentActivity() {
                             Text("Active profile: ${activeProfile!!.name} (${modeText})", style = MaterialTheme.typography.bodyMedium)
                         }
 
-                        // Auto-activate a sole profile. Rule syncing happens in ProfileRepository, not here,
-                        // so opening this screen never overwrites unsaved working changes.
-                        val profiles by profileRepo.profilesFlow.collectAsState(initial = emptyList())
-                        val activeId by profileRepo.activeProfileIdFlow.collectAsState(initial = null)
-                        LaunchedEffect(activeId, profiles) {
-                            if (activeId == null && profiles.size == 1) {
-                                profileRepo.setActiveProfile(profiles.first().id)
-                            }
-                        }
+                        // Auto-activate a sole profile. ProfileRepository decides from one consistent
+                        // snapshot, so opening this screen never overwrites the enforced rules.
+                        LaunchedEffect(Unit) { profileRepo.activateSoleProfileIfNoneActive() }
 
                         Spacer(Modifier.height(16.dp))
 

@@ -154,6 +154,20 @@ class ProfileRepository(private val context: Context) {
         return list.firstOrNull { it.id == activeId }
     }
 
+    /**
+     * If no profile is active and exactly one exists, activates it. Decided from ONE DataStore
+     * snapshot under the lock. UI code must not decide this from two separately collected flows:
+     * a half-loaded state ("1 profile", "active id not loaded yet") would re-activate the profile
+     * and overwrite the enforced rules.
+     */
+    suspend fun activateSoleProfileIfNoneActive() = mutex.withLock {
+        val prefs = context.profileDataStore.data.first()
+        if (prefs[KEY_ACTIVE_ID] != null) return@withLock
+        val only = parseProfiles(prefs[KEY_PROFILES_JSON] ?: "[]").singleOrNull() ?: return@withLock
+        context.profileDataStore.edit { it[KEY_ACTIVE_ID] = only.id }
+        applyToRules(only)
+    }
+
     private suspend fun activeIdOnce(): Long? = activeProfileIdFlow.first()
 
     /**

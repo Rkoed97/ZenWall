@@ -77,12 +77,8 @@ private fun ProfilesListScreen(onBack: () -> Unit) {
         repo.ensureDefaultProfileIfEmpty(legacyMode, legacyApps)
     }
 
-    // Auto-activate a sole profile (ProfileRepository enforces its rules)
-    LaunchedEffect(activeId, profiles) {
-        if (activeId == null && profiles.size == 1) {
-            repo.setActiveProfile(profiles.first().id)
-        }
-    }
+    // Auto-activate a sole profile (decided atomically in ProfileRepository)
+    LaunchedEffect(Unit) { repo.activateSoleProfileIfNoneActive() }
 
     Scaffold(topBar = {
         TopAppBar(title = { Text("Profiles") }, navigationIcon = {
