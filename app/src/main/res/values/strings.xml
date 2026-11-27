@@ -12,4 +12,8 @@
     <string name="widget_label">ZenWall Toggle</string>
     <string name="widget_status_on">ZenWall On</string>
     <string name="widget_status_off">ZenWall Off</string>
+    <string name="vpn_stopped_title">ZenWall firewall is OFF</string>
+    <string name="vpn_revoked_text">Another VPN was turned on, or the VPN permission was revoked. Android allows only one VPN at a time, so blocked apps now have internet access. Tap to turn ZenWall back on.</string>
+    <string name="vpn_failed_text">The firewall could not start, so blocked apps have internet access. Tap to open ZenWall and turn it on again.</string>
+    <string name="vpn_alerts_channel">Firewall alerts</string>
 </resources>

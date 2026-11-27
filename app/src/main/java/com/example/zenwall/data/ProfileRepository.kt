@@ -26,6 +26,7 @@ class ProfileRepository(private val context: Context) {
     private val KEY_NEXT_ID: Preferences.Key<Long> = longPreferencesKey("profiles_next_id")
 
     private val mutex = Mutex()
+    private val appRules = AppRulesRepo(context)
 
     data class Profile(
         val id: Long,
@@ -88,6 +89,7 @@ class ProfileRepository(private val context: Context) {
         // If this is the first profile ever, make it active by default
         if (list.size == 1) {
             context.profileDataStore.edit { it[KEY_ACTIVE_ID] = id }
+            applyToRules(list.first())
         }
         id
     }
@@ -97,28 +99,28 @@ class ProfileRepository(private val context: Context) {
         val idx = list.indexOfFirst { it.id == updated.id }
         if (idx != -1) {
             val now = System.currentTimeMillis()
-            list[idx] = updated.copy(
+            val saved = updated.copy(
                 apps = updated.apps.distinct().sorted(),
                 updatedAt = now
             )
+            list[idx] = saved
             saveProfiles(list)
+            // Editing the active profile changes what is enforced right now
+            if (activeIdOnce() == saved.id) applyToRules(saved)
         }
     }
 
     suspend fun deleteProfile(id: Long) = mutex.withLock {
         val list = getProfilesOnce().filter { it.id != id }
         saveProfiles(list)
-        // If the active profile was deleted, clear or switch to the first available
-        context.profileDataStore.edit { prefs ->
-            val active = prefs[KEY_ACTIVE_ID]
-            if (active == id) {
-                val newActive = list.firstOrNull()?.id
-                if (newActive == null) {
-                    prefs.remove(KEY_ACTIVE_ID)
-                } else {
-                    prefs[KEY_ACTIVE_ID] = newActive
-                }
+        // If the active profile was deleted, switch to the first available (and enforce it),
+        // or clear it. With no profiles left, the current rules stay as they are.
+        if (activeIdOnce() == id) {
+            val newActive = list.firstOrNull()
+            context.profileDataStore.edit { prefs ->
+                if (newActive == null) prefs.remove(KEY_ACTIVE_ID) else prefs[KEY_ACTIVE_ID] = newActive.id
             }
+            newActive?.let { applyToRules(it) }
         }
     }
 
@@ -139,14 +141,27 @@ class ProfileRepository(private val context: Context) {
 
     fun getProfileFlow(id: Long): Flow<Profile?> = profilesFlow.map { list -> list.firstOrNull { it.id == id } }
 
-    suspend fun setActiveProfile(id: Long) {
+    /** Makes [id] the active profile and immediately enforces its rules. */
+    suspend fun setActiveProfile(id: Long) = mutex.withLock {
+        val profile = getProfilesOnce().firstOrNull { it.id == id } ?: return@withLock
         context.profileDataStore.edit { it[KEY_ACTIVE_ID] = id }
+        applyToRules(profile)
     }
 
     suspend fun getActiveProfileOnce(): Profile? {
         val list = getProfilesOnce()
         val activeId = context.profileDataStore.data.map { it[KEY_ACTIVE_ID] }.first()
         return list.firstOrNull { it.id == activeId }
+    }
+
+    private suspend fun activeIdOnce(): Long? = activeProfileIdFlow.first()
+
+    /**
+     * The single place where a profile becomes the enforced rule set. The VPN service observes
+     * AppRulesRepo and rebuilds the tunnel live.
+     */
+    private suspend fun applyToRules(p: Profile) {
+        appRules.setRules(FirewallRules(p.mode == ProfileMode.WHITELIST, p.apps.toSet()))
     }
 
     // Internal JSON helpers

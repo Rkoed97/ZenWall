@@ -166,23 +166,13 @@ class MainActivity : FragmentActivity() {
                             Text("Active profile: ${activeProfile!!.name} (${modeText})", style = MaterialTheme.typography.bodyMedium)
                         }
 
-                        // Keep global AppRules in sync with the active profile and auto-activate sole profile
+                        // Auto-activate a sole profile. Rule syncing happens in ProfileRepository, not here,
+                        // so opening this screen never overwrites unsaved working changes.
                         val profiles by profileRepo.profilesFlow.collectAsState(initial = emptyList())
                         val activeId by profileRepo.activeProfileIdFlow.collectAsState(initial = null)
-                        val appRulesRepo = remember { com.example.zenwall.data.AppRulesRepo(ctx) }
                         LaunchedEffect(activeId, profiles) {
-                            val currentActive = activeId
-                            if (currentActive == null && profiles.size == 1) {
-                                val only = profiles.first()
-                                profileRepo.setActiveProfile(only.id)
-                                appRulesRepo.setWhitelistMode(only.mode == com.example.zenwall.data.ProfileRepository.ProfileMode.WHITELIST)
-                                appRulesRepo.setBlockedPackages(only.apps.toSet())
-                            } else if (currentActive != null) {
-                                val p = profiles.firstOrNull { it.id == currentActive }
-                                if (p != null) {
-                                    appRulesRepo.setWhitelistMode(p.mode == com.example.zenwall.data.ProfileRepository.ProfileMode.WHITELIST)
-                                    appRulesRepo.setBlockedPackages(p.apps.toSet())
-                                }
+                            if (activeId == null && profiles.size == 1) {
+                                profileRepo.setActiveProfile(profiles.first().id)
                             }
                         }
 
@@ -250,7 +240,19 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    // Needed on Android 13+ to show the "firewall is OFF" alert (e.g. when another VPN takes over)
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* best effort */ }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!granted) notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    }
+
     private fun startVpnService() {
+        requestNotificationPermissionIfNeeded()
         val intent = Intent(this, ZenWallVpnService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)

@@ -136,7 +136,7 @@ private fun AppsScreen(
                 Button(onClick = {
                     // Persist selection, notify user, and return to Home
                     scope.launch { repo.setBlockedPackages(selected) }
-                    Toast.makeText(context, "Restart the VPN for changes to take effect", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Saved. Changes apply immediately while ZenWall is on", Toast.LENGTH_LONG).show()
                     context.startActivity(Intent(context, com.example.zenwall.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
                     (context as? android.app.Activity)?.finish()
                 }) { Text("Save") }
@@ -146,7 +146,7 @@ private fun AppsScreen(
                     AppRow(app = app, checked = selected.contains(app.pkg)) { newChecked ->
                         val newSelected = if (newChecked) selected + app.pkg else selected - app.pkg
                         selected = newSelected
-                        // Persist immediately; user must restart VPN to apply changes
+                        // Persist immediately; the running VPN picks the change up live
                         scope.launch { repo.setBlockedPackages(newSelected) }
                     }
                 }
