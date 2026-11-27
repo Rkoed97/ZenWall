@@ -1,9 +1,6 @@
 package com.example.zenwall.vpn
 
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -18,7 +15,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
-import com.example.zenwall.MainActivity
 import com.example.zenwall.R
 import com.example.zenwall.data.AppRulesRepo
 import com.example.zenwall.data.FirewallRules
@@ -57,9 +53,6 @@ class ZenWallVpnService : VpnService() {
         const val ACTION_STOP = "com.example.zenwall.ACTION_STOP"
         private const val TAG = "ZenWallVpn"
         private const val NOTIF_ID = 42
-        private const val NOTIF_ID_STOPPED = 43
-        private const val CHANNEL_ID = "zenwall_vpn"
-        private const val CHANNEL_ID_ALERTS = "zenwall_alerts"
         private const val TUN_ADDRESS_V4 = "10.111.222.1"
         private const val TUN_ADDRESS_V6 = "fd00:7a77:6c6c::1"
         private const val TUN_MTU = 1500
@@ -100,7 +93,7 @@ class ZenWallVpnService : VpnService() {
         } catch (e: Exception) {
             // Avoid a START_STICKY crash loop if the system refuses the foreground start.
             Log.e(TAG, "Could not enter foreground", e)
-            notifyStopped(getString(R.string.vpn_failed_text))
+            FirewallAlerts.notifyStopped(this, getString(R.string.vpn_failed_text))
             stopSelf()
         }
     }
@@ -124,7 +117,7 @@ class ZenWallVpnService : VpnService() {
     override fun onRevoke() {
         // Another VPN took over (only one can be active), or the user revoked the permission.
         Log.w(TAG, "VPN revoked by system")
-        notifyStopped(getString(R.string.vpn_revoked_text))
+        FirewallAlerts.notifyStopped(this, getString(R.string.vpn_revoked_text))
         stopVpn()
     }
 
@@ -169,7 +162,8 @@ class ZenWallVpnService : VpnService() {
             return
         }
         failedAttempts = 0
-        cancelStoppedNotification()
+        FirewallAlerts.cancelStopped(this)
+        FirewallWatchdog.schedule(this)
         val old = tun
         tun = newTun
         closeQuietly(old)
@@ -185,7 +179,7 @@ class ZenWallVpnService : VpnService() {
      */
     private fun handleEstablishFailure() {
         if (tun == null) {
-            notifyStopped(getString(R.string.vpn_failed_text))
+            FirewallAlerts.notifyStopped(this, getString(R.string.vpn_failed_text))
             stopVpn()
             return
         }
@@ -210,7 +204,7 @@ class ZenWallVpnService : VpnService() {
             // everything else. That avoids an instant "unknown host" error or a fallback to the
             // underlying network's resolver.
             .addDnsServer(TUN_DNS_SERVER)
-            .setConfigureIntent(mainActivityIntent())
+            .setConfigureIntent(FirewallAlerts.openAppIntent(this))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) builder.setMetered(false)
         plan.packages.forEach { pkg ->
             try {
@@ -233,7 +227,12 @@ class ZenWallVpnService : VpnService() {
         false
     }
 
+    /**
+     * Deliberate stop: the user turned it off, another VPN took over, or the permission is gone.
+     * Cancels the watchdog so it won't fight the decision.
+     */
     private fun stopVpn() {
+        FirewallWatchdog.cancel(this)
         teardown()
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -301,48 +300,14 @@ class ZenWallVpnService : VpnService() {
         ServiceCompat.startForeground(this, NOTIF_ID, buildOngoingNotification(), type)
     }
 
-    private fun ensureChannels() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL_ID, "ZenWall", NotificationManager.IMPORTANCE_LOW))
-        nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID_ALERTS, getString(R.string.vpn_alerts_channel), NotificationManager.IMPORTANCE_HIGH)
-        )
-    }
-
     private fun buildOngoingNotification(): Notification {
-        ensureChannels()
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        FirewallAlerts.ensureChannels(this)
+        return NotificationCompat.Builder(this, FirewallAlerts.CHANNEL_ID_ONGOING)
             .setSmallIcon(R.drawable.ic_stat_vpn)
             .setContentTitle("ZenWall active")
             .setContentText("Per-app internet control enabled")
-            .setContentIntent(mainActivityIntent())
+            .setContentIntent(FirewallAlerts.openAppIntent(this))
             .setOngoing(true)
             .build()
     }
-
-    private fun notifyStopped(text: String) {
-        ensureChannels()
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID_ALERTS)
-            .setSmallIcon(R.drawable.ic_stat_vpn)
-            .setContentTitle(getString(R.string.vpn_stopped_title))
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setContentIntent(mainActivityIntent())
-            .setAutoCancel(true)
-            .build()
-        runCatching { getSystemService(NotificationManager::class.java).notify(NOTIF_ID_STOPPED, notification) }
-            .onFailure { Log.w(TAG, "Could not post stopped notification", it) }
-    }
-
-    private fun cancelStoppedNotification() {
-        runCatching { getSystemService(NotificationManager::class.java).cancel(NOTIF_ID_STOPPED) }
-    }
-
-    private fun mainActivityIntent(): PendingIntent = PendingIntent.getActivity(
-        this,
-        0,
-        Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-    )
 }
