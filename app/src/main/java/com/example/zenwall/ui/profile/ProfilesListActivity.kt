@@ -77,22 +77,8 @@ private fun ProfilesListScreen(onBack: () -> Unit) {
         repo.ensureDefaultProfileIfEmpty(legacyMode, legacyApps)
     }
 
-    // Keep AppRules in sync with active profile and auto-activate sole profile
-    LaunchedEffect(activeId, profiles) {
-        val currentActive = activeId
-        if (currentActive == null && profiles.size == 1) {
-            val only = profiles.first()
-            repo.setActiveProfile(only.id)
-            appRulesRepo.setWhitelistMode(only.mode == ProfileRepository.ProfileMode.WHITELIST)
-            appRulesRepo.setBlockedPackages(only.apps.toSet())
-        } else if (currentActive != null) {
-            val p = profiles.firstOrNull { it.id == currentActive }
-            if (p != null) {
-                appRulesRepo.setWhitelistMode(p.mode == ProfileRepository.ProfileMode.WHITELIST)
-                appRulesRepo.setBlockedPackages(p.apps.toSet())
-            }
-        }
-    }
+    // Auto-activate a sole profile (decided atomically in ProfileRepository)
+    LaunchedEffect(Unit) { repo.activateSoleProfileIfNoneActive() }
 
     Scaffold(topBar = {
         TopAppBar(title = { Text("Profiles") }, navigationIcon = {
@@ -124,9 +110,6 @@ private fun ProfilesListScreen(onBack: () -> Unit) {
                                     RadioButton(selected = p.id == (activeId ?: -1L), onClick = {
                                         scope.launch {
                                             repo.setActiveProfile(p.id)
-                                            // sync app settings with active profile
-                                            appRulesRepo.setWhitelistMode(p.mode == ProfileRepository.ProfileMode.WHITELIST)
-                                            appRulesRepo.setBlockedPackages(p.apps.toSet())
                                         }
                                     })
                                     IconButton(onClick = {

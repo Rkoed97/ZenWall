@@ -119,7 +119,7 @@ private fun SettingsScreen(vm: com.example.zenwall.ui.MainViewModel, onClose: ()
                 selected = mode,
                 onSelected = { enabled ->
                     vm.setWhitelistMode(enabled)
-                    Toast.makeText(context, "Restart the VPN for changes to take effect", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Mode changed. Applies immediately while ZenWall is on", Toast.LENGTH_LONG).show()
                 }
             )
 

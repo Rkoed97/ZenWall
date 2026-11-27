@@ -34,7 +34,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.example.zenwall.data.ProfileRepository
-import com.example.zenwall.data.AppRulesRepo
 import com.example.zenwall.ui.theme.ZenWallTheme
 import kotlinx.coroutines.launch
 
@@ -92,9 +91,6 @@ private fun ProfilePreviewScreen(profileId: Long, onBack: () -> Unit) {
                     onClick = {
                         scope.launch {
                             repo.setActiveProfile(p.id)
-                            val appRules = AppRulesRepo(ctx)
-                            appRules.setWhitelistMode(p.mode == ProfileRepository.ProfileMode.WHITELIST)
-                            appRules.setBlockedPackages(p.apps.toSet())
                         }
                     }
                 ) { Text("Set as Active") }
